@@ -28,3 +28,7 @@ train_pm <- rsample::training(pm_split)
 test_pm <- rsample::testing(pm_split)
 
 # Making a Receipt
+
+
+
+
