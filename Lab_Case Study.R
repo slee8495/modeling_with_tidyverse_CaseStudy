@@ -28,7 +28,23 @@ train_pm <- rsample::training(pm_split)
 test_pm <- rsample::testing(pm_split)
 
 # Making a Receipt
+simple_rec <- train_pm %>% 
+  recipes::recipe(value ~ .)
 
+simple_rec <- train_pm %>% 
+  recipes::recipe(value ~ .) %>% 
+  recipes::update_role(id, new_role = "id variable")
 
+simple_rec %>% 
+  step_dummy(state, country, city, zcta, one_hot = TRUE) -> simple_rec
+
+simple_rec %>% 
+  update_role("fips", new_role = "country id") -> simple_rec
+
+simple_rec %>% 
+  step_corr(all_predictors(), - CMAQ, - aod) -> simple_rec
+
+simple_rec %>% 
+  step_nzv(all_predictors(), - CMAQ, -aod) -> simple_rec
 
 
