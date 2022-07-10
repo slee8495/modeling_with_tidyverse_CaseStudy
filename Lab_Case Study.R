@@ -5,22 +5,22 @@ library(tidymodels)
 library(magrittr)
 library(skimr)
 
-# Data Import
+#### Data Import
 pm <- readr::read_csv("pm25_data.csv")
 
-# Data Exploration and wrangling
+#### Data Exploration and wrangling
 pm %>% 
   dplyr::mutate(across(c(id, fips, zcta), as.factor)) -> pm
 
 
-# Evaluate Correlation
-# select numeric values only and cor chart
+#### Evaluate Correlation
+#### select numeric values only and cor chart
 pm %>% 
   dplyr::select_if(is.numeric) %>% cor() -> pm_cor
 
 corrplot::corrplot(pm_cor, tl.cex = 0.5)
 
-# Splitting Data
+#### Splitting Data
 set.seed(1234)
 pm_split <- rsample::initial_split(data = pm, prop = 2/3)
 
@@ -31,20 +31,14 @@ test_pm <- rsample::testing(pm_split)
 simple_rec <- train_pm %>% 
   recipes::recipe(value ~ .)
 
+
+#### recipes for cooking!
 simple_rec <- train_pm %>% 
   recipes::recipe(value ~ .) %>% 
-  recipes::update_role(id, new_role = "id variable")
+  recipes::update_role(id, new_role = "id variable") %>% 
+  recipes::update_role("fips", new_role = "country id") %>% 
+  recipes::step_dummy(state, country, city, zcta, one_hot = TRUE) %>% 
+  recipes::step_corr(all_predictors(), -CMAQ, -aod) %>% 
+  recipes::step_nzv(all_predictors(), -CMAQ, -aod)
 
-simple_rec %>% 
-  step_dummy(state, country, city, zcta, one_hot = TRUE) -> simple_rec
-
-simple_rec %>% 
-  update_role("fips", new_role = "country id") -> simple_rec
-
-simple_rec %>% 
-  step_corr(all_predictors(), - CMAQ, - aod) -> simple_rec
-
-simple_rec %>% 
-  step_nzv(all_predictors(), - CMAQ, -aod) -> simple_rec
-
-
+#### Running Pre processing
