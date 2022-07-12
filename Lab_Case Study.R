@@ -37,8 +37,28 @@ simple_rec <- train_pm %>%
   recipes::recipe(value ~ .) %>% 
   recipes::update_role(id, new_role = "id variable") %>% 
   recipes::update_role("fips", new_role = "country id") %>% 
-  recipes::step_dummy(state, country, city, zcta, one_hot = TRUE) %>% 
+  recipes::step_dummy(state, county, city, zcta, one_hot = TRUE) %>% 
   recipes::step_corr(all_predictors(), -CMAQ, -aod) %>% 
   recipes::step_nzv(all_predictors(), -CMAQ, -aod)
 
 #### Running Pre processing
+
+prepped_rec <- prep(simple_rec, verbose = TRUE, retain = TRUE)
+names(prepped_rec)
+
+preproc_train <- recipes::bake(prepped_rec, new_data = NULL)
+glimpse(preproc_train)
+
+# complare with the original data pm
+glimpse(pm)
+
+
+baked_test_pm <- recipes::bake(prepped_rec, new_data = test_pm)
+glimpse(baked_test_pm)
+
+# training data and test data possibly don't match, because they are splitted randomly
+traincities <- train_pm %>% dplyr::distinct(city)
+testcities <- test_pm %>% dplyr::distinct(city)
+
+
+
