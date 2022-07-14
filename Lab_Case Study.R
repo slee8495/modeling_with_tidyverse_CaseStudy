@@ -97,6 +97,28 @@ preproc_train <- recipes::bake(prepped_rec, new_data = NULL)
 skim(preproc_train)   # now no longer NA
 
 #### Specifying the Model
-pm_model <- parsnip::linear_reg()
+PM_model <- parsnip::linear_reg()
 
-lm_PM_model <- PM_model %>% parsnip::set_engine("lm")
+lm_PM_model <- PM_model %>% parsnip::set_engine("lm")      #"glm" for classification modeling
+
+# here, we aim to predict air pollution
+lm_PM_model <-
+  PM_model %>% 
+  parsnip::set_engine("lm") %>% 
+  set_mode("regression")
+
+# here, we combine everything together into a workflow
+PM_wflow <- workflows::workflow() %>% 
+            workflows::add_recipe(novel_rec) %>% 
+            workflows::add_model(lm_PM_model)
+
+PM_wflow
+
+
+# next, we prepare the recipe and fit the model to our training data all at once
+# pringting the output, we can see the coefficients of the model
+
+PM_wflow_fit <- parsnip::fit(PM_wflow, data = train_pm)
+
+#### Assessing the Model Fit
+
