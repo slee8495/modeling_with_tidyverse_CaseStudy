@@ -61,4 +61,42 @@ traincities <- train_pm %>% dplyr::distinct(city)
 testcities <- test_pm %>% dplyr::distinct(city)
 
 
+# get the number of cities that were different
+dim(dplyr::setdiff(traincities, testcities))
+# get the number of cities that overlapped
+dim(dplyr::intersect(traincities, testcities))
 
+## there are lots of test data that are not in training data
+
+
+pm %>% 
+  dplyr::mutate(city = case_when(city == "Not in a city" ~ "Not in a city",
+                                 city != "Not in a city" ~ "In a city")) -> pm
+
+
+set.seed(1234)
+pm_split <- rsample::initial_split(data = pm, prop = 2/3)
+
+train_pm <- rsample::training(pm_split)
+test_pm <- rsample::testing(pm_split)
+
+# now we will create a new recipe
+novel_rec <- train_pm %>% 
+  recipes::recipe() %>% 
+  recipes::update_role(everything(), new_role = "predictor") %>% 
+  recipes::update_role(value, new_role = "outcome") %>% 
+  recipes::update_role(id, new_role = "id variable") %>% 
+  recipes::update_role("fips", new_role = "county id") %>% 
+  recipes::step_dummy(state, county, city, zcta, one_hot = TRUE) %>% 
+  recipes::step_corr(all_numeric()) %>% 
+  recipes::step_nzv(all_numeric())
+
+# now we will check the preprocessed data again to see if we still have NA values.
+prepped_rec <- recipes::prep(novel_rec, verbose = TRUE, retain = TRUE)
+preproc_train <- recipes::bake(prepped_rec, new_data = NULL)
+skim(preproc_train)   # now no longer NA
+
+#### Specifying the Model
+pm_model <- parsnip::linear_reg()
+
+lm_PM_model <- PM_model %>% parsnip::set_engine("lm")
