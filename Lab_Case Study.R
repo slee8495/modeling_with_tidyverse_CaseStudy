@@ -4,6 +4,7 @@ library(tidyverse)
 library(tidymodels)
 library(magrittr)
 library(skimr)
+library(vip)
 
 #### Data Import
 pm <- readr::read_csv("pm25_data.csv")
@@ -121,4 +122,35 @@ PM_wflow
 PM_wflow_fit <- parsnip::fit(PM_wflow, data = train_pm)
 
 #### Assessing the Model Fit
+
+wflowoutput <- PM_wflow_fit %>% 
+  workflows::extract_fit_parsnip() %>% 
+  broom::tidy()
+
+PM_wflow_fit %>% 
+  workflows::pull_workflow_fit() %>% 
+  vip::vip(num_features = 10)
+
+
+# Model Performance: Getting Predicted Values
+wf_fit <- PM_wflow_fit %>% 
+  workflows::pull_workflow_fit()
+
+wf_fitted_values <- wf_fit$fit$fitted.values
+head(wf_fitted_values)
+
+wf_fitted_values <- 
+  broom::augment(wf_fit$fit, data = preproc_train) %>% 
+  dplyr::select(value, .fitted:.std.resid)
+
+head(wf_fitted_values)
+
+values_pred_train <-
+  predict(PM_wflow_fit, train_pm) %>% 
+  dplyr::bind_cols(train_pm %>% dplyr::select(value, fips, county, id))
+
+#### Visualizing Model Performance
+
+
+
 
