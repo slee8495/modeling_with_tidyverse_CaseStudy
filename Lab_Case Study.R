@@ -151,6 +151,34 @@ values_pred_train <-
 
 #### Visualizing Model Performance
 
+# now we can compare the predictd outcome values (or fitted values) to the actual outcome values that we observed
+
+
+wf_fitted_values %>% 
+  ggplot2::ggplot(mapping = aes(x = value, y = .fitted)) +
+  ggplot2::geom_point() +
+  ggplot2::labs(x = "actual outcome values",
+                y = "predicted outcome values")
+
+# hmm.. we could do a little better than this..
 
 
 
+#### Quantifying Model Performance
+# now, let's use different distance functions to assess how far off our predicted outcome and actual outcome values.
+# parameter is RMSE (root mean squared error)
+
+yardstick::metrics(wf_fitted_values,
+                   truth = value, estimate = .fitted)
+
+#### Assessing Model Performance on v-folds Using tune
+set.seed(1234)
+vfold_pm <- rsample::vfold_cv(data = train_pm, v = 10)
+
+dplyr::pull(vfold_pm, splits)
+
+# fit the model to our cross validation folds using the fit_resamples() function of the tune package. 
+
+set.seed(122)
+resample_fit <- tune::fit_resamples(PM_wflow, vfold_pm)
+resample_fit
