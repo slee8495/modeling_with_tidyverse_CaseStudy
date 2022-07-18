@@ -5,6 +5,12 @@ library(tidymodels)
 library(magrittr)
 library(skimr)
 library(vip)
+library(randomForest)
+
+#########################################################################################################
+########################################## Linear Regression ############################################
+#########################################################################################################
+
 
 #### Data Import
 pm <- readr::read_csv("pm25_data.csv")
@@ -181,4 +187,63 @@ dplyr::pull(vfold_pm, splits)
 
 set.seed(122)
 resample_fit <- tune::fit_resamples(PM_wflow, vfold_pm)
+
+
+# we can now take a look at various performance metrics based on the fit of our cross validation "resamples"
 resample_fit
+
+workflowsets::collect_metrics(resample_fit)
+
+
+#########################################################################################################
+######################################## Random Forest Model ############################################
+#########################################################################################################
+
+# Let's predict the outcome variable (air pollution) using a decision  tree method called random forest
+
+
+RF_rec <- recipes::recipe(train_pm) %>% 
+  recipes::update_role(everything(), new_role = "predictor") %>% 
+  recipes::update_role(value, new_role = "outcome") %>% 
+  recipes::update_role(id, new_role = "id variable") %>% 
+  recipes::update_role("fips", new_role = "county id") %>% 
+  recipes::step_novel("state") %>% 
+  recipes::step_string2factor("state", "county", "city") %>% 
+  recipes::step_rm("county") %>% 
+  recipes::step_rm("zcta") %>% 
+  recipes::step_corr(all_numeric()) %>% 
+  recipes::step_nzv(all_numeric)
+
+RF_rec
+
+## random forest modeling
+# mtry: the number of predictor variables that will be randomly sampled
+# min_n: The minimum number of data points in a node
+# trees: the number of trees in the ensumble
+
+PMtree_model <- parsnip::rand_forest(mtry = 10, min_n = 4)
+PMtree_model
+
+
+library(randomForest)
+
+RF_PM_model <-
+  PMtree_model %>% 
+  parsnip::set_engine("randomForest") %>% 
+  parsnip::set_mode("regression")
+
+RF_PM_model
+
+# then we put all this to workflow
+RF_wflow <- workflows::workflow() %>% 
+            workflows::add_recipe(RF_rec) %>% 
+            workflows::add_model(RF_PM_model)
+
+RF_wflow
+
+# finally, we fit the data to the model
+RF_wflow_fit <- parsnip::fit(RF_wflow, data = train_pm)
+
+# I have an error here..try next code first to see if it can move forward
+# if not... well.. forget the randomforst model here then!
+
