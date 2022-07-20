@@ -18,7 +18,7 @@ pm <- readr::read_csv("pm25_data.csv")
 #### Data Exploration and wrangling
 pm %>% 
   dplyr::mutate(across(c(id, fips, zcta), as.factor)) -> pm
-
+skim(pm)
 
 #### Evaluate Correlation
 #### select numeric values only and cor chart
