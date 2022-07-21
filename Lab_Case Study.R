@@ -22,10 +22,13 @@ skim(pm)
 
 #### Evaluate Correlation
 #### select numeric values only and cor chart
+
+# First, we need to pick only numeric values
 pm %>% 
   dplyr::select_if(is.numeric) %>% cor() -> pm_cor
 
 corrplot::corrplot(pm_cor, tl.cex = 0.5)
+
 
 #### Splitting Data
 set.seed(1234)
@@ -34,19 +37,29 @@ pm_split <- rsample::initial_split(data = pm, prop = 2/3)
 train_pm <- rsample::training(pm_split)
 test_pm <- rsample::testing(pm_split)
 
-# Making a Receipt
+
+
+#### Making a Receipt
 simple_rec <- train_pm %>% 
   recipes::recipe(value ~ .)
 
 
 #### recipes for cooking!
+# We want to id variable not to be included in predictor. it's going to create noises. 
+# Also, "fips" variable is not needed.. 
 simple_rec <- train_pm %>% 
   recipes::recipe(value ~ .) %>% 
   recipes::update_role(id, new_role = "id variable") %>% 
-  recipes::update_role("fips", new_role = "country id") %>% 
-  recipes::step_dummy(state, county, city, zcta, one_hot = TRUE) %>% 
-  recipes::step_corr(all_predictors(), -CMAQ, -aod) %>% 
-  recipes::step_nzv(all_predictors(), -CMAQ, -aod)
+  recipes::update_role(fips, new_role = "county id")
+
+# And we want to dummy encode our categorical variables, so that they become numeric (for our linear)
+simple_rec %>% 
+  recipes::step_dummy(state, country, city, zcta, one_hot = TRUE) -> simple_rec
+
+
+
+
+
 
 #### Running Pre processing
 
