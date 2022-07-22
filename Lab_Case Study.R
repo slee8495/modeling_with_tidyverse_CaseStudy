@@ -57,7 +57,15 @@ simple_rec %>%
   recipes::step_dummy(state, country, city, zcta, one_hot = TRUE) -> simple_rec
 
 
+# Now we want to remove variables that appear to be redundant and are highly correlated with others. 
+# But, we want to spare some values like CMAQ and aod
+simple_rec %>% 
+  recipes::step_corr(all_predictors(), - CMAQ, - aod) -> simple_rec
 
+# It is also a good idea to remove variables with near-zero variance
+# again, we want to spare CMAQ and aod
+simple_rec %>% 
+  recipes::step_nzv(all_predictors(), - CMAQ, - aod) -> simple_rec
 
 
 
