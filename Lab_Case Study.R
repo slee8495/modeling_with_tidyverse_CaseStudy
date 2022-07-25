@@ -11,15 +11,17 @@ library(randomForest)
 ########################################## Linear Regression ############################################
 #########################################################################################################
 
-
+#########################################################################################################
 #### Data Import
 pm <- readr::read_csv("pm25_data.csv")
 
+#########################################################################################################
 #### Data Exploration and wrangling
 pm %>% 
   dplyr::mutate(across(c(id, fips, zcta), as.factor)) -> pm
 skim(pm)
 
+#########################################################################################################
 #### Evaluate Correlation
 #### select numeric values only and cor chart
 
@@ -29,7 +31,7 @@ pm %>%
 
 corrplot::corrplot(pm_cor, tl.cex = 0.5)
 
-
+#########################################################################################################
 #### Splitting Data
 set.seed(1234)
 pm_split <- rsample::initial_split(data = pm, prop = 2/3)
@@ -38,12 +40,12 @@ train_pm <- rsample::training(pm_split)
 test_pm <- rsample::testing(pm_split)
 
 
-
+#########################################################################################################
 #### Making a Receipt
 simple_rec <- train_pm %>% 
   recipes::recipe(value ~ .)
 
-
+#########################################################################################################
 #### recipes for cooking!
 # We want to id variable not to be included in predictor. it's going to create noises. 
 # Also, "fips" variable is not needed.. 
@@ -54,7 +56,7 @@ simple_rec <- train_pm %>%
 
 # And we want to dummy encode our categorical variables, so that they become numeric (for our linear)
 simple_rec %>% 
-  recipes::step_dummy(state, country, city, zcta, one_hot = TRUE) -> simple_rec
+  recipes::step_dummy(state, county, city, zcta, one_hot = TRUE) -> simple_rec
 
 
 # Now we want to remove variables that appear to be redundant and are highly correlated with others. 
@@ -68,12 +70,12 @@ simple_rec %>%
   recipes::step_nzv(all_predictors(), - CMAQ, - aod) -> simple_rec
 
 
-
+#########################################################################################################
 #### Running Pre processing
-
 prepped_rec <- prep(simple_rec, verbose = TRUE, retain = TRUE)
 names(prepped_rec)
 
+# we can take a look at it by using the bake()
 preproc_train <- recipes::bake(prepped_rec, new_data = NULL)
 glimpse(preproc_train)
 
@@ -81,10 +83,13 @@ glimpse(preproc_train)
 glimpse(pm)
 
 
+# here, notice how we only have 36 variables now instead of 50. 
+# because two of these are our id variables, and we no longer have any categorical variables. 
+
 baked_test_pm <- recipes::bake(prepped_rec, new_data = test_pm)
 glimpse(baked_test_pm)
 
-# training data and test data possibly don't match, because they are splitted randomly
+# training data and test data possibly don't match, because they are separated randomly
 traincities <- train_pm %>% dplyr::distinct(city)
 testcities <- test_pm %>% dplyr::distinct(city)
 
@@ -95,20 +100,22 @@ dim(dplyr::setdiff(traincities, testcities))
 dim(dplyr::intersect(traincities, testcities))
 
 ## there are lots of test data that are not in training data
-
-
+# Let's make only two cases for city column. because there are way too many cases. 
+pm$city
 pm %>% 
   dplyr::mutate(city = case_when(city == "Not in a city" ~ "Not in a city",
                                  city != "Not in a city" ~ "In a city")) -> pm
+pm$city
 
 
+# Let's do split part again since we have the new data with city column edited. 
 set.seed(1234)
 pm_split <- rsample::initial_split(data = pm, prop = 2/3)
 
 train_pm <- rsample::training(pm_split)
 test_pm <- rsample::testing(pm_split)
 
-# now we will create a new recipe
+# now we will create a new recipe (same process as above)
 novel_rec <- train_pm %>% 
   recipes::recipe() %>% 
   recipes::update_role(everything(), new_role = "predictor") %>% 
@@ -124,18 +131,23 @@ prepped_rec <- recipes::prep(novel_rec, verbose = TRUE, retain = TRUE)
 preproc_train <- recipes::bake(prepped_rec, new_data = NULL)
 skim(preproc_train)   # now no longer NA
 
+#########################################################################################################
 #### Specifying the Model
+# here in this case study, linear regression
 PM_model <- parsnip::linear_reg()
 
 lm_PM_model <- PM_model %>% parsnip::set_engine("lm")      #"glm" for classification modeling
 
-# here, we aim to predict air pollution
+# now let's tell parsnip what we want. 
+
 lm_PM_model <-
   PM_model %>% 
   parsnip::set_engine("lm") %>% 
   set_mode("regression")
 
+# here, we aim to predict air pollution
 # here, we combine everything together into a workflow
+
 PM_wflow <- workflows::workflow() %>% 
             workflows::add_recipe(novel_rec) %>% 
             workflows::add_model(lm_PM_model)
@@ -144,10 +156,12 @@ PM_wflow
 
 
 # next, we prepare the recipe and fit the model to our training data all at once
-# pringting the output, we can see the coefficients of the model
+# printing the output, we can see the coefficients of the model
 
 PM_wflow_fit <- parsnip::fit(PM_wflow, data = train_pm)
 
+
+#########################################################################################################
 #### Assessing the Model Fit
 
 wflowoutput <- PM_wflow_fit %>% 
