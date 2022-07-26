@@ -164,16 +164,26 @@ PM_wflow_fit <- parsnip::fit(PM_wflow, data = train_pm)
 #########################################################################################################
 #### Assessing the Model Fit
 
+# After we fit out model, we can use broom package to look at the output in an easy/tidy way
+
 wflowoutput <- PM_wflow_fit %>% 
   workflows::extract_fit_parsnip() %>% 
   broom::tidy()
 
+# We have fit our model on our training data. which means we have a model to predict values of air pollution. 
+# Now, we want to know which variables are the most important. 
+# we can explore this using vip()
+# This function creates a bar plot. 
+
+# Let's look top 10 important variables. 
 PM_wflow_fit %>% 
   workflows::pull_workflow_fit() %>% 
   vip::vip(num_features = 10)
 
 
-# Model Performance: Getting Predicted Values
+
+#########################################################################################################
+### Model Performance: Getting Predicted Values
 wf_fit <- PM_wflow_fit %>% 
   workflows::pull_workflow_fit()
 
