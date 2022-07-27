@@ -184,22 +184,30 @@ PM_wflow_fit %>%
 
 #########################################################################################################
 ### Model Performance: Getting Predicted Values
+# we will compare our training model to the actual result
+
+# first, let's pull out our predicted outcome values. 
 wf_fit <- PM_wflow_fit %>% 
   workflows::pull_workflow_fit()
 
 wf_fitted_values <- wf_fit$fit$fitted.values
 head(wf_fitted_values)
 
+# ultimately, we can get the fitted values using the augment() function of the broom package using  the output from workflows
 wf_fitted_values <- 
   broom::augment(wf_fit$fit, data = preproc_train) %>% 
   dplyr::select(value, .fitted:.std.resid)
 
 head(wf_fitted_values)
 
+# finally, we can also use the predict() function. 
+# note that we need to use the raw data instead of the prepossessed data
 values_pred_train <-
   predict(PM_wflow_fit, train_pm) %>% 
   dplyr::bind_cols(train_pm %>% dplyr::select(value, fips, county, id))
 
+
+#########################################################################################################
 #### Visualizing Model Performance
 
 # now we can compare the predictd outcome values (or fitted values) to the actual outcome values that we observed
